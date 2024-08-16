@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  contacts     Contact[]     @relation("UserContacts")
+  contactsAs   Contact[]     @relation("UserContactsAsContact")
+  chats        ChatMember[]
+  messages     Message[]
+  onlineStatus OnlineStatus?
+  Chat         Chat[]
+}
+
+model Contact {
+  userId    Int      @map("user_id")
+  contactId Int      @map("contact_id")
+  createdAt DateTime @default(now())
+
+  user    User @relation("UserContacts", fields: [userId], references: [id])
+  contact User @relation("UserContactsAsContact", fields: [contactId], references: [id])
+
+  @@id([userId, contactId])
+}
+
+model Chat {
+  id        Int      @id @default(autoincrement())
+  isGroup   Boolean  @default(false)
+  groupName String?
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator  User         @relation(fields: [createdBy], references: [id])
+  members  ChatMember[]
+  messages Message[]
+}
+
+model ChatMember {
+  chatId  Int      @map("chat_id")
+  userId  Int      @map("user_id")
+  addedAt DateTime @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([chatId, userId])
+}
+
+model Message {
+  id       Int      @id @default(autoincrement())
+  chatId   Int      @map("chat_id")
+  senderId Int      @map("sender_id")
+  content  String
+  sentAt   DateTime @default(now())
+  isRead   Boolean  @default(false)
+
+  chat   Chat @relation(fields: [chatId], references: [id])
+  sender User @relation(fields: [senderId], references: [id])
+}
+
+model OnlineStatus {
+  userId       Int      @id @map("user_id")
+  isOnline     Boolean  @default(false)
+  lastActiveAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
